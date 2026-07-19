@@ -91,60 +91,15 @@ export default function App() {
     const activeGateData = currentTelemetry.gates[gateKey];
     if (!activeGateData) return;
 
-    // Calculate distance to other gates
-    const gatesList = Object.entries(currentTelemetry.gates).map(([key, gate]) => {
-      const dx = activeGateData.coords[0] - gate.coords[0];
-      const dy = activeGateData.coords[1] - gate.coords[1];
-      const dz = activeGateData.coords[2] - gate.coords[2];
-      const distance = Math.round(Math.sqrt(dx * dx + dy * dy + dz * dz) * 20);
-      return {
-        key,
-        name: gate.name,
-        congestion: gate.congestion,
-        status: gate.status,
-        distance
-      };
-    });
-
-    const prompt = `You are the Lusail Stadium Operations AI. Analyze the crowd occupancy telemetry for the active gate and all other gates.
-Active Gate:
-- Key: ${gateKey}
-- Name: ${activeGateData.name}
-- Congestion Level: ${activeGateData.congestion}%
-- Status: ${activeGateData.status}
-
-All Available Gates (including active gate and possible alternative gates with distance from the active gate):
-${JSON.stringify(gatesList, null, 2)}
-
-Your task is to generate:
-1. A clear warning message explaining the congestion state of the active gate.
-2. A recommended alternative gate from the list (choose the best available gate that has lower congestion, preferably 'clear' or 'moderate', and is relatively close). If the active gate is not congested, or no better alternative is available, return null.
-3. A detailed, professional reroute recommendation explaining why this alternative gate is recommended.
-
-Respond strictly in JSON format matching this schema:
-{
-  "warningText": "string describing the congestion warning or current state of the active gate",
-  "recommendedGateKey": "string representing the recommended gate key (e.g. gateB), or null if no alternative is available or active gate is clear",
-  "recommendationText": "string describing the reroute recommendation and reasoning"
-}
-Do not include any markdown formatting, code blocks (e.g. \`\`\`json), or additional text outside the JSON object.`;
-
     try {
-      const apiKey = import.meta.env.VITE_ANTIGRAVITY_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API key is not configured.");
-      }
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`, {
+      const response = await fetch(`/api/analyze`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
+          gateKey,
+          telemetry: currentTelemetry
         }),
         signal
       });
@@ -153,13 +108,7 @@ Do not include any markdown formatting, code blocks (e.g. \`\`\`json), or additi
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-        throw new Error("Empty response from Gemini API.");
-      }
-
-      const parsed = JSON.parse(text.trim());
+      const parsed = await response.json();
       if (signal.aborted) return;
 
       setGeminiAnalysis(parsed);
