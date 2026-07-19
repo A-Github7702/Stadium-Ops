@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import StadiumCanvas from './components/StadiumCanvas';
 import AIInputHub from './components/AIInputHub';
 import TelemetryControl from './components/TelemetryControl';
@@ -82,12 +82,19 @@ export default function App() {
     { time: new Date().toLocaleTimeString(), message: 'System Initialized. Telemetry streams active.' },
     { time: new Date().toLocaleTimeString(), message: '3D Waypoint Grid operational. Connected to Lusail Stadium operations server.' }
   ]);
+  const addLog = useCallback((message) => {
+    setAiLogs((prev) => [
+      ...prev,
+      { time: new Date().toLocaleTimeString(), message }
+    ]);
+  }, []);
   const logTerminalEndRef = useRef(null);
+
 
   const [geminiAnalysis, setGeminiAnalysis] = useState(null);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
 
-  const fetchGeminiAnalysis = async (gateKey, currentTelemetry, signal) => {
+  const fetchGeminiAnalysis = useCallback(async (gateKey, currentTelemetry, signal) => {
     const activeGateData = currentTelemetry.gates[gateKey];
     if (!activeGateData) return;
 
@@ -122,7 +129,7 @@ export default function App() {
         setIsAnalysisLoading(false);
       }
     }
-  };
+  }, [addLog]);
 
   useEffect(() => {
     if (!activeGate) {
@@ -144,7 +151,7 @@ export default function App() {
       clearTimeout(timer);
       abortController.abort();
     };
-  }, [activeGate, telemetry]);
+  }, [activeGate, telemetry, fetchGeminiAnalysis]);
 
   // Auto-scroll logs terminal
   useEffect(() => {
@@ -159,7 +166,7 @@ export default function App() {
     } else {
       addLog('ℹ️ INFO: SOS deactivated. Standard routing tables restored.');
     }
-  }, [sosActive]);
+  }, [sosActive, addLog]);
 
   // Log gate inspection
   useEffect(() => {
@@ -169,17 +176,10 @@ export default function App() {
         activeGate === 'gateD' || activeGate === 'gateE' ? 'Main Parking Lot P1' : 'Central Bus Loop';
       addLog(`🔍 INSPECT: Operator focused ${gate.name} (${gate.congestion}% congestion). Active path: Gate ➔ ${nearestTransit}`);
     }
-  }, [activeGate]);
-
-  const addLog = (message) => {
-    setAiLogs((prev) => [
-      ...prev,
-      { time: new Date().toLocaleTimeString(), message }
-    ]);
-  };
+  }, [activeGate, telemetry.gates, addLog]);
 
   // Voice Command Dispatcher
-  const handleVoiceCommand = (command) => {
+  const handleVoiceCommand = useCallback((command) => {
     if (command.type === 'sos') {
       setSosActive(true);
       addLog(command.message);
@@ -194,10 +194,10 @@ export default function App() {
       setActiveGate(null);
       addLog('🎙️ Voice Command: Resetting viewport angle.');
     }
-  };
+  }, [addLog]);
 
   // Vision Command Parser
-  const handleVisionCommand = (action) => {
+  const handleVisionCommand = useCallback((action) => {
     if (!action) return;
 
     if (action.type === 'reroute') {
@@ -239,7 +239,7 @@ export default function App() {
     } else {
       addLog('👁️ Gemini Vision: Context analysis complete. Stadium parameters normal.');
     }
-  };
+  }, [addLog]);
 
   return (
     <div className={`h-screen w-screen flex flex-col transition-all duration-700 select-none ${sosActive ? 'bg-red-950/15' : 'bg-slate-950'

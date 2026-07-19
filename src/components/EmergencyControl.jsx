@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, AlertTriangle, Play, Pause } from 'lucide-react';
+import { ShieldAlert, AlertTriangle } from 'lucide-react';
 
 export default function EmergencyControl({ sosActive, setSosActive }) {
   return (

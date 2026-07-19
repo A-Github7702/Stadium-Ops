@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from './App';
 
@@ -9,7 +9,7 @@ vi.mock('./components/StadiumCanvas', () => {
     default: ({ telemetry, activeGate, setActiveGate }) => (
       <div data-testid="stadium-canvas">
         <div data-testid="active-gate">{activeGate || 'none'}</div>
-        {Object.entries(telemetry.gates).map(([key, gate]) => (
+        {Object.entries(telemetry.gates).map(([key, _gate]) => (
           <button
             key={key}
             data-testid={`canvas-gate-${key}`}

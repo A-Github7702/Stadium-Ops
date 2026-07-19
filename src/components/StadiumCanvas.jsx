@@ -18,7 +18,7 @@ function GlowingPath({ start, end, color = '#06B6D4', width = 3 }) {
   const lineRef = useRef();
   const points = useMemo(() => getCurvePoints(start, end), [start, end]);
 
-  useFrame((state) => {
+  useFrame((_state) => {
     if (lineRef.current?.material) {
       lineRef.current.material.dashOffset -= 0.015;
     }
@@ -39,7 +39,7 @@ function GlowingPath({ start, end, color = '#06B6D4', width = 3 }) {
 }
 
 // Camera and controls controller for smooth sweeps
-function CameraController({ focusTarget, controlsRef, telemetry, transitHubs, safetyZones }) {
+function CameraController({ focusTarget, controlsRef, telemetry, transitHubs, safetyZones: _safetyZones }) {
   const { camera } = useThree();
   const isTransitioningRef = useRef(false);
 

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Image, Upload, FileCode, CheckCircle, RefreshCw, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Mic, MicOff, Upload, CheckCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 
-export default function AIInputHub({ onVoiceCommand, onVisionCommand, sosActive }) {
+export default function AIInputHub({ onVoiceCommand, onVisionCommand, sosActive: _sosActive }) {
   // Voice State
   const [isListening, setIsListening] = useState(false);
   const [voiceText, setVoiceText] = useState('');
@@ -15,45 +15,8 @@ export default function AIInputHub({ onVoiceCommand, onVisionCommand, sosActive 
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef(null);
 
-  // Initialize Speech Recognition
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
-      return;
-    }
-
-    const rec = new SpeechRecognition();
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.lang = 'en-US';
-
-    rec.onstart = () => {
-      setIsListening(true);
-      setVoiceText('Listening for stadium commands...');
-    };
-
-    rec.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setVoiceText(transcript);
-      processVoiceCommand(transcript);
-    };
-
-    rec.onerror = (e) => {
-      console.error(e);
-      setVoiceText('Speech error. Click microphone to try again.');
-      setIsListening(false);
-    };
-
-    rec.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current = rec;
-  }, []);
-
   // Process Voice commands
-  const processVoiceCommand = (text) => {
+  const processVoiceCommand = useCallback((text) => {
     const cleanText = text.toLowerCase();
     
     // Check for Exits / SOS / Evacuations
@@ -97,7 +60,46 @@ export default function AIInputHub({ onVoiceCommand, onVisionCommand, sosActive 
     } else {
       setVoiceText(`Command unrecognized: "${text}". Try speaking: "Focus Gate A", "Show Metro Station" or "Find the fastest route out".`);
     }
-  };
+  }, [onVoiceCommand]);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = 'en-US';
+
+    rec.onstart = () => {
+      setIsListening(true);
+      setVoiceText('Listening for stadium commands...');
+    };
+
+    rec.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setVoiceText(transcript);
+      processVoiceCommand(transcript);
+    };
+
+    rec.onerror = (e) => {
+      console.error(e);
+      setVoiceText('Speech error. Click microphone to try again.');
+      setIsListening(false);
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = rec;
+  }, [processVoiceCommand]);
+
+
 
   const toggleListening = () => {
     if (!speechSupported) {
